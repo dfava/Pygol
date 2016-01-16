@@ -3,8 +3,11 @@
 Game of Life in Python.
 
 > **Implements:**
+
 > Eight neighbor rule on a square grid
+
 > Six neighbor rule on a hex grid (http://www.mathrecreation.com/2012/10/hex-life.html)
+
 > Twelve neighbor rule on a hex grid (http://www.well.com/~dgb/hexrules.html)
 
 #### Run
@@ -16,7 +19,9 @@ Example runs:
 Use -8 for a square board and eight neighbor rule and -12 for a hex board with 12 neighbor rule.  Otherwise, defaults to hex board and 6 neighbor rule.
 
 > python3 gol.py -f oscillators.txt -8 -nc
+
 > python3 gol.py -f hex6_oscillators.txt -nc
+
 > python3 gol.py -12 -nc
 
 Use -nc to see a "movie" of the output.
