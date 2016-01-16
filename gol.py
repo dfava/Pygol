@@ -21,11 +21,24 @@ class Cell():
 class Grid():
     neighbors_offset = [(r_idx, c_idx) for r_idx in range(-1,2) for c_idx in range(-1,2) if (r_idx, c_idx) != (0,0)]
 
-    '''A rectangular grid with the 8 neighbor rule'''
-    def __init__(self, size : int):
-        assert(size > 0)
-        self.size = size
+    def __init__(self, arg):
+        '''Constructor for a Grid.  Either initialize the grid randomly when arg is a float, interpreting arg 
+as the probability of the cell being alive, or read the grid from a file when arg is a string with the filename.'''
         self.cells = None
+        if type(arg) == tuple:
+            (size, prob) = arg
+            self.size = size
+            self.cells = [[('X' if random.random() < prob else '.') for r_idx in range(0,self.size)] for c_idx in range(0,self.size)]
+            return
+        assert(type(arg) == str)
+        with open(arg, 'r') as f:
+            lines = f.readlines()
+        self.cells = [list(l.strip()) for l in lines]
+        # Validate the size of the grid
+        self.size = len(self.cells)
+        for idx,row in enumerate(self.cells):
+            if len(row) != self.size:
+                print('Row %d does not have the expected number (%d) of cells!' % (idx+1, self.size))
 
     def __getitem__(self, key):
         if type(key) == tuple:
@@ -41,22 +54,6 @@ class Grid():
                 continue
             ret.append(Cell(coordinate, 1)) # All neighbors have the same weight of 1
         return ret
-
-    def init(self, arg):
-        '''Either initialize the grid randomly when arg is a float, interpreting arg as the probability
-of the cell being alive, or read the grid from a file when arg is a string with the filename.'''
-        if type(arg) == float:
-            self.cells = [[('X' if random.random() < arg else '.') for r_idx in range(0,self.size)] for c_idx in range(0,self.size)]
-            return
-        assert(type(arg) == str)        
-        with open(arg, 'r') as f:
-            lines = f.readlines()
-        self.cells = [list(l.strip()) for l in lines]
-        # Validate the size of the grid
-        self.size = len(self.cells)
-        for idx,row in enumerate(self.cells):
-            if len(row) != self.size:
-                print('Row %d does not have the expected number (%d) of cells!' % (idx+1, self.size))
 
     def update(self, debug=False):
         '''Update cells given the current configuration.'''
@@ -114,7 +111,7 @@ class HexGrid12(HexGrid6):
         (row,col) = cell
         for offset in HexGrid6.neighbors_offset[row%2==1]:
             coordinate = (row + offset[0], col + offset[1])
-            if -1 in coordinate or self.size in coordinate:
+            if -1 in coordinate or -2 in coordinate or self.size in coordinate or self.size+1 in coordinate:
                 continue
             ret.append(Cell(coordinate, 0.3))
         return ret
@@ -123,47 +120,42 @@ class HexGrid12(HexGrid6):
         '''Implements the rule in http://www.well.com/~dgb/hexrules.html'''
         return True if (cell_val == 'X' and (2.0 < neighbor_score < 3.3)) or (cell_val == '.' and (2.3 < neighbor_score < 2.9)) else False
 
+def gridBuilder(grid_type, args):
+    if grid_type == 8:
+        return Grid(args)
+    elif grid_type == 6:
+        return HexGrid6(args)
+    elif grid_type == 12:
+        return HexGrid12(args)
+
 def parse_args():
     '''Parse and validate command line args'''
     parser = argparse.ArgumentParser(description="Game of Live", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-6', nargs='?', dest='neighbor_rules', const='6', type=int, default=6,
-        help='use the 6 neighbor rules on a hex grid')
+        help='use 6 neighbor rules on hex grid')
     parser.add_argument('-8', nargs='?', dest='neighbor_rules', const='8', type=int, default=6,
-        help='use the 8 neighbor rules on a rectangular grid')
+        help='use 8 neighbor rules on rectangular grid')
     parser.add_argument('-12', nargs='?', dest='neighbor_rules', const='12', type=int, default=6,
-        help='use the 12 neighbor rules on a hex grid')
+        help='use 12 neighbor rules on hex grid')
     parser.add_argument('-size', dest='size', default=100, type=int,
-        help='specify the size of the grid to be n X n')
+        help='set grid size to SIZE by SIZE')
     parser.add_argument('-f', dest='fname',
-        help='read in the initial configuration from the specified file')
+        help='read initial configuration from file')
     parser.add_argument('-g', dest='gens', default=10, type=int,
-        help='specifiy the number of generations to simulate')
+        help='number of generations to simulate')
     parser.add_argument('-p', dest='gen_print', default=1, type=int,
-        help='specify that every nth generation should be printed')
+        help='print every nth generation')
     parser.add_argument('-i', dest='prob', default=0.5, type=float,
-        help='specify the probabilty of a cell being alive in the initial configuration if no file is provided')
+        help='probabilty of alive cell initially')
     parser.add_argument('-nc', nargs='?', dest='ncurses', default=False, const=True, type=bool,
         help='use ncurses for output')
     args = parser.parse_args()
     return args
 
-def create_grid(args):
-    '''Instantiate the proper grid'''
-    if args.neighbor_rules==8:
-        grid = Grid(args.size)
-    elif args.neighbor_rules==6:
-        grid = HexGrid6(args.size)
-    elif args.neighbor_rules==12:
-        grid = HexGrid12(args.size)
-    else:
-        assert(0) # Should never get here
-    # Populate grid randomly or by reading it from a file
-    grid.init(args.fname) if args.fname != None else grid.init(args.prob)
-    return grid
-
 def main():
     args = parse_args()
-    grid = create_grid(args)
+    grid = gridBuilder(args.neighbor_rules, args.fname) if args.fname != None \
+            else gridBuilder(args.neighbor_rules, (args.size, args.prob))
 
     def main_curses(stdscr):
         pad = curses.newpad(args.size*2+5, args.size*2+5)
@@ -171,7 +163,7 @@ def main():
             pad.addstr(0,0, 'Gen%d' % gen)
             pad.addstr(1,0, grid.__repr__())
             pad.refresh(0,0, 5,5, 20,75)
-            time.sleep(1)
+            time.sleep(0.1)
             grid.update()
 
     if args.ncurses:
