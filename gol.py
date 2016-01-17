@@ -104,12 +104,12 @@ class HexGrid6(Grid):
 class HexGrid12(HexGrid6):
     '''A hex grid with the 12 neighbor rule'''
     common_neighbors_offset = [(-2,0),(2,0)]
-    neighbors_offset = [common_neighbors_offset + [(-1,-2), (-1,-1), (1,-1), (1,-2)], common_neighbors_offset + [(-1,2), (-1,1), (1,1), (1,2)]]
+    neighbors_offset = [common_neighbors_offset + [(-1,-2), (-1,1), (1,1), (1,-2)], common_neighbors_offset + [(-1,2), (-1,-1), (1,-1), (1,2)]]
 
     def getNeighbors(self, cell : Cell):
         ret = super(HexGrid12, self).getNeighbors(cell)
         (row,col) = cell
-        for offset in HexGrid6.neighbors_offset[row%2==1]:
+        for offset in HexGrid12.neighbors_offset[row%2==1]:
             coordinate = (row + offset[0], col + offset[1])
             if -1 in coordinate or -2 in coordinate or self.size in coordinate or self.size+1 in coordinate:
                 continue
