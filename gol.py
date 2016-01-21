@@ -1,4 +1,6 @@
 '''Game of life'''
+__author__      = "Daniel Fava"
+__contact__     = "http://github.com/dfava"
 import sys
 import copy
 import random
